@@ -38,7 +38,7 @@ if (( $(gcc -dumpversion | cut -d. -f1) > 11 )); then
 fi
 
 # ---- torch / torchvision / mmcv-full (same builds as the A40 reproduction) ----
-pip_ "setuptools==59.5.0" wheel
+pip_ "setuptools==59.5.0" "wheel==0.41.3"   # newer wheel needs packaging>=24, which conflicts with the pinned packaging==23.2
 pip_ "torch==1.9.0+cu111" "torchvision==0.10.0+cu111" -f https://download.pytorch.org/whl/torch_stable.html
 pip_ -r "$REPO/colab/requirements_t4.txt"
 pip_ "mmcv-full==1.4.2" -f https://download.openmmlab.com/mmcv/dist/cu111/torch1.9.0/index.html
