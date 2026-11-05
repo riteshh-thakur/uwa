@@ -257,6 +257,13 @@ def evaluate(results, tag):
         with contextlib.redirect_stdout(io.StringIO()):
             E.evaluate(), E.accumulate()
         out[kind] = ap_from_eval(E)
+        pc = E.eval['precision'][:, :, :, 0, -1]  # per-class AP (all areas, maxDets 100), before the resamples touch E
+        out[kind]['per_class_AP'] = {eval_ds.CLASSES[k]: (float(pc[:, :, k][pc[:, :, k] > -1].mean())
+                                                           if (pc[:, :, k] > -1).any() else float('nan'))
+                                     for k in range(pc.shape[2])}
+        out[kind]['n_instances'] = {eval_ds.CLASSES[k]: int(sum(1 for a in eval_ds.coco.loadAnns(
+            eval_ds.coco.getAnnIds(imgIds=E.params.imgIds, catIds=[E.params.catIds[k]]))))
+            for k in range(pc.shape[2])}
         # paired resamples: keep p.imgIds, blank the per-image results of excluded images (a changed imgIds
         # after evaluate() would make accumulate() index the wrong images)
         K, A, I = len(E.params.catIds), len(E.params.areaRng), len(E.params.imgIds)
@@ -316,6 +323,10 @@ for spec in runs:
     json.dump(done, open(args.out, 'w'), indent=1)
     b = done.get('base')
     d = (lambda k: f"{100 * (m[k]['AP'] - b[k]['AP']):+.2f}") if b else (lambda k: '')
+    if spec == 'base':
+        print('per-class mask AP / instances in the evaluated images:')
+        for c, v in m['segm']['per_class_AP'].items():
+            print(f"    {c:16s} {100 * v:6.2f}   n={m['segm']['n_instances'][c]}")
     print(f"{spec:24s} box {100 * m['bbox']['AP']:.2f} ({d('bbox')})  mask {100 * m['segm']['AP']:.2f} ({d('segm')})  "
           f"mask APs {100 * m['segm']['APs']:.2f}  {lat * 1000:.0f} ms/img  [{time.time() - t0:.0f}s]", flush=True)
 
