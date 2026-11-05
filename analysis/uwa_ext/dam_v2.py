@@ -22,9 +22,19 @@ IMAGENET_MEAN = (123.675, 116.28, 103.53)
 IMAGENET_STD = (58.395, 57.12, 57.375)
 
 
+class LayerNorm2d(nn.LayerNorm):
+    """LayerNorm over the channel dimension of (B, C, H, W) maps."""
+
+    def __init__(self, dim, eps=1e-6):
+        super().__init__(dim, eps=eps)
+
+    def forward(self, x):
+        return super().forward(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+
+
 class DAMv2(nn.Module):
 
-    def __init__(self, embed_dim=768, model_name='convnextv2_atto.fcmae_ft_in1k',
+    def __init__(self, embed_dim=768, model_name='convnextv2_atto.fcmae_ft_in1k', proj_norm='gn32',
                  pretrained=True, cnn_checkpoint=None,
                  input_mean=IMAGENET_MEAN, input_std=IMAGENET_STD):
         """
@@ -48,8 +58,12 @@ class DAMv2(nn.Module):
         chs = self.cnn.feature_info.channels()
         reductions = self.cnn.feature_info.reduction()
         assert list(reductions) == [4, 8, 16, 32], reductions
+        # proj_norm: 'gn32' GroupNorm(32, D) | 'gn1' GroupNorm(1, D) | 'ln2d' LayerNorm over channels (eps 1e-6).
+        # All have the same parameter names and shapes, so a strict checkpoint load cannot tell them apart.
+        norms = dict(gn32=lambda: nn.GroupNorm(32, embed_dim), gn1=lambda: nn.GroupNorm(1, embed_dim),
+                     ln2d=lambda: LayerNorm2d(embed_dim))
         self.proj = nn.ModuleList(
-            nn.Sequential(nn.Conv2d(c, embed_dim, 1), nn.GroupNorm(32, embed_dim))
+            nn.Sequential(nn.Conv2d(c, embed_dim, 1), norms[proj_norm]())
             for c in chs)
 
         # x_cnn = x * a + b maps the backbone's normalization onto the

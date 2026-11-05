@@ -52,6 +52,9 @@ ap.add_argument('--runs', nargs='+', default=['default'],
                 help="run specs (see docstring) or 'default' = base, zero:0..11, prune 8-11, progressive late removal")
 ap.add_argument('--with-mean', action='store_true', help='add mean:0..11 to the default runs')
 ap.add_argument('--n-boot', type=int, default=50)
+ap.add_argument('--set', nargs='*', default=[], metavar='KEY=VALUE',
+                help="config overrides after the ViTUWAX mapping, e.g. model.neck.ff_cfg.hr_residual=False "
+                     "model.backbone.dam_cfg.proj_norm=ln2d fp16=None (values via ast.literal_eval)")
 ap.add_argument('--out', required=True)
 ap.add_argument('--seed', type=int, default=0)
 args = ap.parse_args()
@@ -100,6 +103,19 @@ if bb.type == 'ViTUWAX':  # A40-only classes -> reconstruction in analysis/uwa_e
     neck.ff_cfg = dict(compressed_channels=64, lowpass_kernel=5, highpass_kernel=3, feature_resample=True)
     neck.ff_fp32 = True
     cfg.custom_imports = dict(imports=['uwa_ext'], allow_failed_imports=False)
+import ast  # noqa: E402
+for kv in args.set:
+    key, val = kv.split('=', 1)
+    try:
+        val = ast.literal_eval(val)
+    except (ValueError, SyntaxError):
+        pass  # keep as string
+    node = cfg
+    *path, last = key.split('.')
+    for k in path:
+        node = node[k]
+    node[last] = val
+    print(f'override {key} = {val!r}')
 if cfg.get('custom_imports'):
     import_modules_from_strings(**cfg.custom_imports)
 cfg.model.pretrained = None
