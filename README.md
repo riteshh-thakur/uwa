@@ -68,27 +68,29 @@ hf_hub_download('riteshh31/vit-uwa-b6-best-checkpoint', 'best_segm_mAP_epoch_29.
     --data-root datasets/USIS10K --runs base --subset 50 --out /content/test_base.json
 ```
 ```python
-# 6a. Gate (~15 min): base on 500 val images. The checkpoint recorded val segm mAP 45.98 on the full val set;
-#     expect roughly 44-48 here (sampling noise). Far outside that: stop, do not run the ablations.
+# 6a. Gate (~15 min): base on ~1,494 val images (all but the 100 calibration images).
+#     Observed here: box 45.1 / mask 44.0 (the checkpoint recorded 45.98 on the full val set).
+#     Do NOT gate on small subsets: rare classes (robots n=46, aquatic plants n=69, sea-floor n=75) make
+#     subset AP swing by several points (50 / 150 / 500 images gave mask AP 38.4 / 44.4 / 40.9).
 !cd {R} && /content/uwa/bin/python analysis/mlp_study/mlp_ablate_eval.py \
     --config configs/b6_best_3x_config.py --checkpoint /content/ckpt/best_segm_mAP_epoch_29.pth \
-    --data-root datasets/USIS10K --runs base --subset 500 \
-    --out /content/drive/MyDrive/mlp_ablation_results/ablate_val500.json
+    --data-root datasets/USIS10K --runs base --subset 0 --n-boot 2 \
+    --out /content/drive/MyDrive/mlp_ablation_results/base_fullval.json
 ```
 ```python
-# 6b. Short ablation (~1 h): late-block question + two early-block reference points (300 images)
+# 6b. Short ablation (~1.5-2 h): late-block question + two early-block reference points, 800 images
 !cd {R} && /content/uwa/bin/python analysis/mlp_study/mlp_ablate_eval.py \
     --config configs/b6_best_3x_config.py --checkpoint /content/ckpt/best_segm_mAP_epoch_29.pth \
-    --data-root datasets/USIS10K --subset 300 \
+    --data-root datasets/USIS10K --subset 800 --n-boot 30 \
     --runs base zero:8 zero:9 zero:10 zero:11 prune:8,9,10,11@0.5 prune:8,9,10,11@0.25 zero:9,10,11 zero:0 zero:5 \
-    --out /content/drive/MyDrive/mlp_ablation_results/ablate_short_val300.json
+    --out /content/drive/MyDrive/mlp_ablation_results/ablate_short_val800.json
 ```
 ```python
-# 6c. Full ablation (~3 h): all 31 configurations on 500 images (add --with-mean for 12 more)
+# 6c. Full ablation (all 31 configurations, ~6 h at 800 images; split it with --runs across sessions)
 !cd {R} && /content/uwa/bin/python analysis/mlp_study/mlp_ablate_eval.py \
     --config configs/b6_best_3x_config.py --checkpoint /content/ckpt/best_segm_mAP_epoch_29.pth \
-    --data-root datasets/USIS10K --runs default \
-    --out /content/drive/MyDrive/mlp_ablation_results/ablate_val500.json
+    --data-root datasets/USIS10K --subset 800 --n-boot 30 --runs default \
+    --out /content/drive/MyDrive/mlp_ablation_results/ablate_val800.json
 ```
 Results are written to Drive after every configuration, so a disconnect loses at most the run in progress.
 After a restart run cells 1-4 again, then repeat the same cell 6x: finished runs are skipped. A markdown
@@ -108,4 +110,5 @@ table with 90 % paired-resample intervals is written next to the JSON.
 ## Troubleshooting
 - `checkpoint does not match the model`: the message lists the first missing / unexpected keys; share it.
 - Setup error compiling the CUDA op: rerun cell 3; the compiled wheel is cached on Drive for later sessions.
-- Base AP far below 44 in cell 6a: the reconstruction does not reproduce the trained model. Stop and report.
+- Base mask AP on the ~1,494-image gate far below 43: the reconstruction does not reproduce the trained model. Stop and report.
+- `analysis/mlp_study/variant_sweep.py` tests reconstruction details that leave tensor shapes unchanged (fp16, FreqFusion options, projection norm).
