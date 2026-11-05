@@ -359,7 +359,7 @@ workflow = [('train', 1)]
 pretrained = '../pretrained/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0--imagenet2012-steps_20k-lr_0.01-res_384.pth'
 fp16 = dict(loss_scale=dict(init_scale=512))
 custom_imports = dict(
-    imports=['uwa_ext.vit_uwa_x', 'uwa_ext.freqfusion_fpn', 'uwa_ext.optim'],
+    imports=['uwa_ext'],  # the A40 training modules (uwa_ext.vit_uwa_x, .freqfusion_fpn, .optim) are not public
     allow_failed_imports=False)
 ROOT = '.'
 DATA = './datasets/USIS10K/'
