@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+# downloaded at setup time, never committed (upstream FreqFusion has no license file)
+analysis/uwa_ext/freqfusion.py
+analysis/pylib/
+# data, weights, outputs, secrets
+*.pth
+datasets/
+ckpt/
+analysis/results/
+_tmp_*
+.env
+*.env
