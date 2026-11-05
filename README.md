@@ -36,7 +36,7 @@ from google.colab import drive, userdata
 drive.mount('/content/drive')
 !git clone -q https://github.com/Linqirui/ViT-UWA.git /content/ViT-UWA
 !git -C /content/ViT-UWA checkout -q 8cffc86bb6cb5fd2b77d3f5785e16286bd7a304b
-!git clone -q https://github.com/<OWNER>/<THIS-REPO>.git /content/overlay
+!git clone -q https://github.com/riteshh-thakur/uwa.git /content/overlay
 !cp -r /content/overlay/analysis /content/overlay/colab /content/overlay/configs /content/ViT-UWA/
 R = '/content/ViT-UWA'
 ```
